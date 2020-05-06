@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
+// Для хеширования пароля модуль bcryptjs
+const bcrypt = require('bcryptjs');
+// Для создания токенов воспользуемся пакетом jsonwebtoken
+const jwt = require('jsonwebtoken');
+// импортируем схему
 const userModel = require('../models/user.js');
+
+const { NODE_ENV, JWT_SECRET } = require('../config.js');
 
 const { ObjectId } = mongoose.Types;
 
@@ -24,8 +31,38 @@ module.exports.findUser = (req, res) => {
 
 // создает пользователя
 module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  userModel.create({ name, about, avatar })
-    .then((user) => res.status(200).send({ data: user }))
-    .catch((err) => ((err.name === 'ValidationError') ? res.status(400).send({ message: 'Ошибка валидации' }) : res.status(500).send({ message: 'Произошла ошибка' })));
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
+
+  // хешируем пароль
+  bcrypt.hash(password, 10)
+    .then((hash) => {
+      userModel.create({
+        name, about, avatar, email, password: hash,
+      });
+    })
+  // .then((user) => { userModel.findOne({ _id: user._id }); })
+    .then((user) => res.status(200).send(user))
+    .catch(() => res.status(404).send({ message: 'Введите все данные корректно' }));
+};
+
+// контроллер login, который получает из запроса почту и пароль и проверяет их
+module.exports.login = (req, res) => {
+  const { email, password } = req.body;
+  return userModel.findUserByCredentials(email, password)
+    .then((user) => {
+      // создаем токен методом sign, передали два аргумента: _id и секретный ключ подписи
+      // токен создается на 7 дней
+      const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
+      // отправим токен, браузер сохранит его в куках
+      /* res.cookie('jwt', token, {
+                maxAge: 604800,
+                httpOnly: true,
+                sameSite: true,
+                secure: true,
+            }); */
+      res.send({ token });
+    })
+    .catch((err) => { res.status(401).send({ message: err.message }); });
 };

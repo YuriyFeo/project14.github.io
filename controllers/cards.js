@@ -1,48 +1,46 @@
-class NotFoundError extends Error {
-  constructor(message) {
-    super(message);
-    this.statusCode = 404;
-  }
-}
-
-const mongoose = require('mongoose');
 const cardModel = require('../models/card.js');
-
-const { ObjectId } = mongoose.Types;
 
 // возвращает все карточки
 module.exports.getCards = (req, res) => {
-  cardModel.find({})
-    .then((cards) => res.status(200).send({ data: cards }))
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    cardModel.find({})
+        .then((cards) => res.status(200).send({ data: cards }))
+        .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
 };
 
 // создаёт карточку
 module.exports.createCard = (req, res) => {
-  const { name, link } = req.body;
-  cardModel.create({ name, link, owner: req.user._id })
-    .then((card) => res.status(200).send({ data: card }))
-    .catch((err) => ((err.name === 'ValidationError') ? res.status(400).send({ message: 'Ошибка валидации' }) : res.status(500).send({ message: 'Произошла ошибка' })));
+    const { name, link } = req.body;
+    cardModel.create({ name, link, owner: req.user._id })
+        .then((card) => res.status(200).send({ data: card }))
+        .catch((err) => res.status(404).send({ message: err.message }));
 };
-
 
 //  удаляет карточку по идентификатору
 module.exports.deleteCard = (req, res) => {
-  const { cardId } = req.params;
-
-  if (!ObjectId.isValid(cardId)) {
-    res.status(400).send({ message: 'Невалидный id' });
-    return;
-  }
-  cardModel.findById(cardId)
-    .orFail(() => new NotFoundError('Карточка не найдена'))
-    .then((card) => {
-      if (!card.owner.equals(req.user._id)) {
-        res.status(403).send({ message: 'Отсутствует доступ' });
-      } else {
-        cardModel.findByIdAndRemove(cardId)
-          .then(() => res.status(200).send({ data: card }));
-      }
-    })
-    .catch((err) => res.status(err.statusCode || 500).send({ message: 'Что-то пошло не так' }));
+    card.findById(req.params.id)
+        .then((cardWithId) => {
+            const { owner } = cardWithId;
+            return owner;
+        })
+        .then((owner) => {
+            if (req.user._id === owner.toString()) {
+                return card.findByIdAndRemove(req.params.id);
+            }
+            return Promise.reject(new Error('Чтобы удалить карточку,вам необходимо быть её владельцем.'));
+        })
+        .then((user) => {
+            if (user) {
+                res.send({ data: user });
+            } else {
+                res.status(400).send({ message: `Карточки с id: ${req.params.id} не существует` });
+                console.error();
+            }
+        })
+        .catch((err) => {
+            if (err) {
+                res.status(400)
+                    .send({ message: 'Чтобы удалить карточку,вам необходимо быть её владельцем.' });
+                console.error(err.stack);
+            }
+        });
 };

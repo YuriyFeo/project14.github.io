@@ -1,13 +1,14 @@
 const express = require('express');
 const mongoose = require('mongoose');
+// const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const { PORT, DATABASE_URL } = require('./config.js');
 const users = require('./routes/users.js');
 const cards = require('./routes/cards.js');
+const { createUser, login } = require('./controllers/users');
+const auth = require('./middlewares/auth');
 
-// const { PORT = 3000 } = process.env;
 const app = express();
-
 
 // подключаемся к серверу mongo
 mongoose.connect(DATABASE_URL, {
@@ -17,22 +18,16 @@ mongoose.connect(DATABASE_URL, {
   useUnifiedTopology: true,
 });
 
-// Реализуйте временное решение авторизации
-
-app.use((req, res, next) => {
-  req.user = {
-    _id: '5e9ca7a7269ccfd5619e98b5',
-  };
-
-  next();
-});
-
-
 // подключаем мидлвары, роуты
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use('/users', users);
-app.use('/cards', cards);
+
+app.post('/signin', login);
+app.post('/signup', createUser);
+
+app.use('/users', auth, users);
+app.use('/cards', auth, cards);
+
 app.use((req, res) => {
   res.status(404).send({ message: 'Запрашиваемый ресурс не найден' });
 });
