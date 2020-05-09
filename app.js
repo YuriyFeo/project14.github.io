@@ -2,13 +2,17 @@ const express = require('express');
 const mongoose = require('mongoose');
 // const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
-const { PORT, DATABASE_URL } = require('./config.js');
+const cookieParser = require('cookie-parser');
+const { PORT, DATABASE_URL } = require('./config');
 const users = require('./routes/users.js');
 const cards = require('./routes/cards.js');
 const { createUser, login } = require('./controllers/users');
 const auth = require('./middlewares/auth');
 
+
 const app = express();
+
+app.use(cookieParser());
 
 // подключаемся к серверу mongo
 mongoose.connect(DATABASE_URL, {
@@ -30,6 +34,15 @@ app.use('/cards', auth, cards);
 
 app.use((req, res) => {
   res.status(404).send({ message: 'Запрашиваемый ресурс не найден' });
+});
+
+app.use((err, req, res) => {
+  const status = err.status || 500;
+  let { message } = err;
+  if (status === 500) {
+    message = 'unexpected error';
+  }
+  res.status(status).send(message);
 });
 
 // слушаем ответ сервера

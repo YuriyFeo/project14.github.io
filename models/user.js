@@ -29,12 +29,13 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    validate: {
-      validator: (v) => validator.isEmail(v),
-      message: 'Неправильный формат почты',
-    },
     required: true,
-    unique: true,
+    index: {
+      unique: true,
+    },
+    validate: {
+      validator: (value) => validator.isEmail(value),
+    },
   },
   password: {
     required: true,
@@ -45,7 +46,7 @@ const userSchema = new mongoose.Schema({
 });
 
 
-userSchema.statics.findUserByCredentials = function (email, password) {
+userSchema.statics.findUserByCredentials = function fun(email, password) {
   // попытка найти пользователя по email
   return this.findOne({ email }).select('+password')
     .then((user) => {

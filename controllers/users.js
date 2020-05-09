@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 // импортируем схему
 const userModel = require('../models/user.js');
 
-const { NODE_ENV, JWT_SECRET } = require('../config.js');
+const { NODE_ENV, JWT_SECRET } = require('../config');
 
 const { ObjectId } = mongoose.Types;
 
@@ -31,20 +31,32 @@ module.exports.findUser = (req, res) => {
 
 // создает пользователя
 module.exports.createUser = (req, res) => {
+  if (req.body.password.length < 8) {
+    return res.status(400).send({ message: 'Пароль должен содержать не менее 8 символов' });
+  }
+
+
   const {
-    name, about, avatar, email, password,
+    name,
+    about,
+    avatar,
+    email,
+    password,
   } = req.body;
 
   // хешируем пароль
   bcrypt.hash(password, 10)
-    .then((hash) => {
-      userModel.create({
-        name, about, avatar, email, password: hash,
-      });
-    })
-  // .then((user) => { userModel.findOne({ _id: user._id }); })
+    .then((hash) => userModel.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
+  // находим созданного юзера, для отсечения пароля
+    .then((user) => { userModel.findOne({ _id: user._id }); })
     .then((user) => res.status(200).send(user))
-    .catch(() => res.status(404).send({ message: 'Введите все данные корректно' }));
+    .catch((err) => { if (err) { res.status(400).send({ message: 'Введите все данные корректно' }); } });
 };
 
 // контроллер login, который получает из запроса почту и пароль и проверяет их
@@ -56,12 +68,12 @@ module.exports.login = (req, res) => {
       // токен создается на 7 дней
       const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
       // отправим токен, браузер сохранит его в куках
-      /* res.cookie('jwt', token, {
-                maxAge: 604800,
-                httpOnly: true,
-                sameSite: true,
-                secure: true,
-            }); */
+      res.cookie('jwt', token, {
+        maxAge: 604800,
+        httpOnly: true,
+        sameSite: true,
+        // secure: true,
+      });
       res.send({ token });
     })
     .catch((err) => { res.status(401).send({ message: err.message }); });
