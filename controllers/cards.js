@@ -21,13 +21,17 @@ module.exports.deleteCard = (req, res) => {
   const ownerId = req.user._id;
   cardModel.findById(cardId)
     .then((card) => {
-      if (card.owner.equals(ownerId) /* card.owner.toString() === ownerId */) {
-        cardModel.findByIdAndRemove(cardId)
-          .then((card) => res.send({ data: card }))
-          .catch(() => errorSend(res));
+      if (card) {
+        if (card.owner.equals(ownerId)) {
+          cardModel.findByIdAndRemove(cardId)
+            .then((cardRemove) => res.send({ remove: cardRemove }))
+            .catch((err) => res.status(500).send({ message: err }));
+        } else {
+          res.status(403).send({ message: 'Это не ваша карта' });
+        }
       } else {
-        return res.status(500).send({ message: 'Вы не имеете доступ к удалению чужих карточек' });
+        res.status(404).send({ message: 'Карточка не найдена' });
       }
     })
-    .catch(() => res.status(500).send({ message: 'Не найден объект с таким идентификатором' }));
+    .catch((err) => res.status(404).send({ message: err.message }));
 };

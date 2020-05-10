@@ -1,5 +1,5 @@
 module.exports = {
-  PORT: parseInt(process.env.PORT) || 3000,
+  PORT: parseInt(process.env.PORT, 10) || 3000,
   SECRET: process.env.SECRET || 'local',
   DATABASE_URL: 'mongodb://localhost:27017/mestodb',
   NODE_ENV: 'production',

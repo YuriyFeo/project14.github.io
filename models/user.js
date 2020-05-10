@@ -1,9 +1,12 @@
 // подключаем модуль mongoose для работы с базой данных
 const mongoose = require('mongoose');
 // подключаем модуль validator для валидации email и avatar
-const validator = require('validator');
+// const validator = require('validator');
 // полключаем модуль bcryptjs для хеширования
 const bcrypt = require('bcryptjs');
+
+const isEmail = require('validator/lib/isEmail');
+const isURL = require('validator/lib/isURL');
 
 // Опишем схему:
 const userSchema = new mongoose.Schema({
@@ -23,8 +26,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     validate: {
-      validator: (v) => validator.isURL(v),
-      message: (props) => `${props.value} Неверный URL!`,
+      validator: (v) => isURL(v),
+      message: 'Неправильный формат URL',
+      // validator: (v) => validator.isURL(v),
+      // message: (props) => `${props.value} Неверный URL!`,
     },
   },
   email: {
@@ -34,7 +39,9 @@ const userSchema = new mongoose.Schema({
       unique: true,
     },
     validate: {
-      validator: (value) => validator.isEmail(value),
+      validator: (v) => isEmail(v),
+      message: 'Неправильный формат почты',
+      /* validator: (value) => validator.isEmail(value), */
     },
   },
   password: {

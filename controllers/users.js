@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 // Для хеширования пароля модуль bcryptjs
 const bcrypt = require('bcryptjs');
 // Для создания токенов воспользуемся пакетом jsonwebtoken
@@ -8,7 +8,7 @@ const userModel = require('../models/user.js');
 
 const { NODE_ENV, JWT_SECRET } = require('../config');
 
-const { ObjectId } = mongoose.Types;
+// const { ObjectId } = mongoose.Types;
 
 // возвращает пользователя
 module.exports.getUsers = (req, res) => {
@@ -20,10 +20,10 @@ module.exports.getUsers = (req, res) => {
 // находит пользователя по id
 module.exports.findUser = (req, res) => {
   const { id } = req.params;
-  if (!ObjectId.isValid(id)) {
-    res.status(400).send({ message: 'Невалидный id' });
-    return;
-  }
+  /* if (!ObjectId.isValid(id)) {
+                res.status(400).send({ message: 'Невалидный id' });
+                return;
+            } */
   userModel.findById({ _id: id })
     .then((user) => (user ? res.status(200).send({ data: user }) : res.status(404).send({ message: 'Нет пользователя с таким id' })))
     .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
@@ -31,11 +31,6 @@ module.exports.findUser = (req, res) => {
 
 // создает пользователя
 module.exports.createUser = (req, res) => {
-  if (req.body.password.length < 8) {
-    return res.status(400).send({ message: 'Пароль должен содержать не менее 8 символов' });
-  }
-
-
   const {
     name,
     about,
@@ -44,8 +39,9 @@ module.exports.createUser = (req, res) => {
     password,
   } = req.body;
 
+
   // хешируем пароль
-  bcrypt.hash(password, 10)
+  return bcrypt.hash(password, 10)
     .then((hash) => userModel.create({
       name,
       about,
@@ -53,10 +49,13 @@ module.exports.createUser = (req, res) => {
       email,
       password: hash,
     }))
-  // находим созданного юзера, для отсечения пароля
-    .then((user) => { userModel.findOne({ _id: user._id }); })
-    .then((user) => res.status(200).send(user))
-    .catch((err) => { if (err) { res.status(400).send({ message: 'Введите все данные корректно' }); } });
+    .then(() => res.send({
+      name,
+      about,
+      avatar,
+      email,
+    }))
+    .catch(() => { res.status(500).send({ message: 'Произошла ошибка' }); });
 };
 
 // контроллер login, который получает из запроса почту и пароль и проверяет их
