@@ -38,11 +38,11 @@ app.use((req, res) => {
 
 app.use((err, req, res) => {
   const status = err.status || 500;
-  let { message } = err;
+  let { message } = err.message;
   if (status === 500) {
-    message = 'unexpected error';
+    message = 'Что-то пошло не так';
   }
-  res.status(status).send(message);
+  res.status(status).send({ message });
 });
 
 // слушаем ответ сервера
