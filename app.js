@@ -35,8 +35,8 @@ app.use('/cards', auth, cards);
 app.use((req, res) => {
   res.status(404).send({ message: 'Запрашиваемый ресурс не найден' });
 });
-
-app.use((err, req, res) => {
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
   const status = err.status || 500;
   let { message } = err.message;
   if (status === 500) {
