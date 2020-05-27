@@ -1,48 +1,51 @@
-class NotFoundError extends Error {
-  constructor(message) {
-    super(message);
-    this.statusCode = 404;
-  }
-}
+/* eslint-disable no-unused-vars */
 
 const mongoose = require('mongoose');
 const cardModel = require('../models/card.js');
 
-const { ObjectId } = mongoose.Types;
+const Error404 = require('../errors/err404');
+const Error401 = require('../errors/err401');
+const Error403 = require('../errors/err403');
+const Error500 = require('../errors/err500');
 
 // возвращает все карточки
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   cardModel.find({})
-    .then((cards) => res.status(200).send({ data: cards }))
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    .then((cards) => res.send(cards))
+    .catch((err) => next(new Error500(err.message)));
 };
 
 // создаёт карточку
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const { name, link } = req.body;
   cardModel.create({ name, link, owner: req.user._id })
-    .then((card) => res.status(200).send({ data: card }))
-    .catch((err) => ((err.name === 'ValidationError') ? res.status(400).send({ message: 'Ошибка валидации' }) : res.status(500).send({ message: 'Произошла ошибка' })));
+    .then((card) => res.status(200).send(card))
+    .catch((err) => next(new Error401('Введите все данные корректно')));
 };
 
-
 //  удаляет карточку по идентификатору
-module.exports.deleteCard = (req, res) => {
+module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
+  const ownerId = req.user._id;
 
-  if (!ObjectId.isValid(cardId)) {
-    res.status(400).send({ message: 'Невалидный id' });
-    return;
-  }
   cardModel.findById(cardId)
-    .orFail(() => new NotFoundError('Карточка не найдена'))
     .then((card) => {
-      if (!card.owner.equals(req.user._id)) {
-        res.status(403).send({ message: 'Отсутствует доступ' });
-      } else {
-        cardModel.findByIdAndRemove(cardId)
-          .then(() => res.status(200).send({ data: card }));
+      if (!card) {
+        throw new Error404('Нет карточки с таким id');
       }
+      return card.owner.equals(ownerId);
     })
-    .catch((err) => res.status(err.statusCode || 500).send({ message: 'Что-то пошло не так' }));
+    .then((isMatch) => {
+      if (!isMatch) {
+        throw new Error403('Невозможно удалить чужую карточку');
+      }
+      return cardModel.findByIdAndRemove(cardId);
+    })
+    .then((cardRemove) => {
+      if (!cardRemove) {
+        throw new Error403('Невозможно удалить чужую карточку');
+      }
+      res.send({ remove: cardRemove });
+    })
+    .catch((err) => next(new Error500(err.message)));
 };

@@ -1,6 +1,11 @@
+// подключаем модуль mongoose для работы с базой данных
 const mongoose = require('mongoose');
-const { checkLink } = require('../validators/checkLink');
+// подключаем модуль для валидации email и avatar
+// const validator = require('validator');
 
+const isURL = require('validator/lib/isURL');
+
+// Опишем схему:
 const cardSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -12,8 +17,10 @@ const cardSchema = new mongoose.Schema({
     type: String,
     required: true,
     validate: {
-      validator: checkLink,
-      message: (props) => `${props.value} is not a valid link!`,
+      validator: (v) => isURL(v),
+      message: 'Неправильный формат URL',
+      // validator: (v) => validator.isURL(v),
+      // message: (props) => `${props.value} is not a valid link!`,
     },
   },
   owner: {
